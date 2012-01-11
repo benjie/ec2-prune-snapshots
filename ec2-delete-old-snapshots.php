@@ -1,5 +1,6 @@
 <?php
 define('NOOP',true);
+// Credit to Erik Dasque for the following function (modified)
 function keepSnapShot($ts) {
 	$now = time();
 	$older_than = $now - 14 * 24 * 60 * 60;
