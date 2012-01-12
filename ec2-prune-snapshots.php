@@ -1,4 +1,5 @@
 <?php
+define('VERSION','0.1');
 $defaultSettings = array(
   "NOOP"=>true,
   "quiet"=>0,
@@ -21,7 +22,29 @@ function optcount($options,$s) {
   }
 }
 
-$options = getopt("vqa:V:d");
+$options = getopt("vqa:V:dh");
+if (isset($options['h'])) {
+  echo "ec2-prune-snapshots v".VERSION." by http://www.BenjieGillam.com/\n";
+  echo "\n";
+  echo "This script defaults to no action - specify -d to perform operations.\n";
+  echo "\n";
+  echo "Usage:\n";
+  echo "\t-h\t\tHelp\n";
+  echo "\t-v\t\tVerbose (specify multiple times for greater verbosity)\n";
+  echo "\t-q\t\tQuiet\n";
+  echo "\t-d\t\tActually perform operations (delete/do it)\n";
+  echo "\t-a365:30:7:3\tSet global options\n";
+  echo "\t-v'vol-abcdefgh:365:30:7:3'\tSet options for specific volume\n";
+  echo "\n";
+  echo "Options are specified as 4 ages, in days, for each operation\n";
+  echo "\t1st: delete all older snapshots\n";
+  echo "\t2nd: delete older unless 1st of month\n";
+  echo "\t3rd: delete older unless Sunday or 1st of month\n";
+  echo "\t4th: keep only one per day older than this\n";
+  echo "\n";
+  echo "\tSnapshots newer than the 4th parameter will be kept.\n";
+  exit();
+}
 $defaultSettings['quiet'] = optcount($options,'q');
 $defaultSettings['verbose'] = optcount($options,'v');
 $defaultSettings['NOOP'] = !isset($options['d']);
