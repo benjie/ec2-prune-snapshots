@@ -14,6 +14,33 @@ If you're doing `ec2-create-snapshot` frequently, then you'll need to clear thos
  * Configurable on the command line (see below)
  * Uses the official AWS PHP SDK
 
+## Installing
+
+This project links uses the Amazon AWS SDK for PHP.
+You can either use the module from PEAR (in which case you'll need to
+modify the source of this script) or pull their version
+straight from github. I prefer the latter aproach so I've linked
+it as a submodule. To fetch it, simply do the following:
+
+    git clone git://github.com/BenjieGillam/ec2-prune-snapshots.git
+    cd ec2-prune-snapshots
+    git submodule update --init
+
+The AWS SDK for PHP expects your credentials to be in ~/.aws/sdk/config.inc.php
+(see [reference](https://aws.amazon.com/articles/4261#configurecredentials))
+
+    mkdir -p ~/.aws/sdk/
+    cp sdk/config-sample.inc.php ~/.aws/sdk/config.inc.php
+    vim ~/.aws/sdk/config.inc.php
+
+You might need to install PHP5 if you don't already have it. On Ubuntu:
+
+    sudo apt-get install php5-cli php5-curl
+
+Then you can see what the script would do by running
+
+    php ec2-prune-snapshots.php -v
+
 ## Configuration:
 
 From the help message:
