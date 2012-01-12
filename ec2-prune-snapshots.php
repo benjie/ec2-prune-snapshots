@@ -27,6 +27,7 @@ if (isset($options['h'])) {
   echo "ec2-prune-snapshots v".VERSION." by http://www.BenjieGillam.com/\n";
   echo "\n";
   echo "This script defaults to no action - specify -d to perform operations.\n";
+  echo "Be sure to set your credentials in ~/.aws/sdk/config.inc.php as specified by the AWS SDK. See: https://aws.amazon.com/articles/4261#configurecredentials\n";
   echo "\n";
   echo "Usage:\n";
   echo "\t-h\t\tHelp\n";
