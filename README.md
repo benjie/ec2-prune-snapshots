@@ -46,3 +46,7 @@ My thanks to [Eric Dasque's ec2-manage-snapshots][ec2-manage-snapshots] which in
 
 [ec2-manage-snapshots]: https://github.com/edasque/ec2-manage-snapshots
 [ec2-delete-old-snapshots]: http://code.google.com/p/ec2-delete-old-snapshots/
+
+# DISCLAIMER
+
+THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
