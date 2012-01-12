@@ -1,40 +1,83 @@
 <?php
 define('NOOP',true);
-// Credit to Erik Dasque for the following function (modified)
-function keepSnapShot($ts) {
-	$now = time();
-	$older_than = $now - 14 * 24 * 60 * 60;
-	$older_than_month = $now - 30 * 24 * 60 * 60;
-	
-	//	echo 'Day of month: '.date("d",$ts)."\n";
-  //	echo 'Day of week: '.date("w",$ts)."\n";
-  echo "\t";
-	echo date('M d, Y',$ts)."\t";
-	
-	if ($ts>=$older_than) { 
-		echo "Recent backup\tKEEP\n" ;
-		return(TRUE); 
-		} 
-	if (date("d",$ts)==1) { 
-		echo "1st of month\tKEEP\n" ; 
-		return(TRUE); 
-		}
-	if ((date("w",$ts)==0) && $ts>$older_than_month) { 
-		echo "Recent Sunday\tKEEP\n" ;
-		return(TRUE); 
-		} 
-	if ((date("w",$ts)==0) && $ts<=$older_than_month) { 
-		echo "Old Sunday\tDELETE\n" ;
-		return(FALSE); 
-		} 
-	if ($ts<$older_than) { 
-		echo "Old backup\tDELETE\n" ; 
-		return(FALSE); 
-		} 
-		
-	
-	echo "Unknown condition on ".date('F d, Y',$ts)."\n"; exit(0);
-	return(FALSE); 
+
+$defaultSettings = array(
+  "quiet"=>0,
+  "verbose"=>0,
+  "clearAllBefore"=>18*30,  // 18 months, roughly
+  "clearNot1stBefore"=>30,  // a month
+  "clearNotSunBefore"=>7,   // a week
+  "oncePerDayBefore"=>3     // 3 days
+);
+
+function optcount($options,$s) {
+  if (!isset($options[$s])) {
+    return 0;
+  } else if (is_array($options[$s])) {
+    return count($options[$s]);
+  } else {
+    return 1;
+  }
+}
+
+$options = getopt("vqa:");
+$defaultSettings['quiet'] = optcount($options,'q');
+$defaultSettings['verbose'] = optcount($options,'v');
+// Credit to Erik Dasque for inspiring the following function
+function keepSnapShot($ts, $lastSavedTs, $settings) {
+  $now = time();
+  $day = 24*60*60;
+  $clearNot1stAfter = $now - $settings['clearAllBefore'] * $day;
+  $clearNotSunAfter = $now - $settings['clearNot1stBefore'] * $day;
+  $oncePerDayAfter =  $now - $settings['clearNotSunBefore'] * $day;
+  $saveAfter =        $now - $settings['oncePerDayBefore'] * $day;
+
+  if ( $saveAfter         < $oncePerDayAfter
+    || $oncePerDayAfter   < $clearNotSunAfter
+    || $clearNotSunAfter  < $clearNot1stAfter)
+  {
+    die("Invalid order");
+  }
+
+  $verbose = $settings['verbose'];
+  $quiet = $settings['quiet'];
+
+  $logDate = "\t".date('M d, Y',$ts)."\t";
+
+  $isDailyDupe = $lastSavedTs > 1000000000
+    && date('Y-m-d',$ts) == date('Y-m-d',$lastSavedTs);
+  $isSunday = intval(date("w", $ts)) == 0;
+  $is1st = intval(date("d", $ts)) == 1;
+
+  if ($ts >= $saveAfter) {
+    if ($verbose) echo "{$logDate}Very recent\tKEEP\n";
+    return TRUE;
+  } else if ($ts >= $oncePerDayAfter && !$isDailyDupe) {
+    if ($verbose) echo "{$logDate}Recent backup\tKEEP\n";
+    return TRUE;
+  } else if ($ts >= $clearNotSunAfter && $isSunday && !$isDailyDupe) {
+    if ($verbose) echo "{$logDate}Recent Sunday\tKEEP\n";
+    return TRUE;
+  } else if ($ts >= $clearNot1stAfter && $is1st && !$isDailyDupe) {
+    if ($verbose) echo "{$logDate}1st of month\tKEEP\n" ;
+    return TRUE;
+  } else {
+    if ($isDailyDupe) {
+      if (!$quiet) echo "{$logDate}Daily dupe\tDELETE\n";
+    } else if (!$isSunday && !$is1st) {
+      if (!$quiet) echo "{$logDate}Old backup\tDELETE\n";
+    } else if ($isSunday && !$is1st) {
+      if (!$quiet) echo "{$logDate}Old Sunday\tDELETE\n";
+    } else if ($isSunday && $is1st) {
+      if (!$quiet) echo "{$logDate}Ancient Sunday\tDELETE\n";
+    } else if ($ts < $clearNot1stAfter) {
+      if (!$quiet) echo "{$logDate}Ancient backup\tDELETE\n";
+    } else {
+      echo "{$logDate}UNKNOWN!!\n";
+      die("ERROR: Not sure on reason for deletion?!\n");
+    }
+    return FALSE;
+  }
 }
 require(dirname(__FILE__).'/sdk/sdk.class.php');
 
@@ -62,24 +105,28 @@ foreach ($response->body->snapshotSet->item as $item) {
   $snapshotDates[$volId][count($snapshots[$volId])-1] = strtotime($item['startTime']);
 }
 foreach ($snapshots as $volId => &$snaps) {
-  echo "Sorting '$volId' (".count($snaps).")\n";
-  array_multisort($snapshotDates[$volId],SORT_ASC,$snaps);
+  if ($defaultSettings['verbose']>1) echo "Sorting '$volId' (".count($snaps).")\n";
+  array_multisort($snapshotDates[$volId],SORT_DESC,$snaps);
   $snapshots[$volId] = $snaps;
 }
-$deleted = 0;
-$remaining = 0;
+$totalDeleted = 0;
+$totalRemaining = 0;
 foreach ($snapshots as $volId => &$snaps) {
+  $settings = $defaultSettings;
   echo "Processing '$volId'\n";
   if (empty($snaps)) {
     continue;
   }
-  $saved = array_pop($snaps);
+  $deleted = 0;
+  $remaining = 0;
+  $saved = array_shift($snaps);
   $remaining++;
-  echo "\t".date("M d, Y")."\tFORCE SAVE\tKEEP\n";
+  if ($settings['verbose']) echo "\t".date("M d, Y",strtotime($saved['startTime']))."\tFORCE SAVE\tKEEP\n";
+  $lastSavedSnapshotTs = null;
   foreach ($snaps as $snap) {
     $t = strtotime($snap['startTime']);
     if ($t > 1000000000) {
-      if (!keepSnapshot($t)) {
+      if (!keepSnapshot($t,$lastSavedSnapshotTs,$settings)) {
         $deleted++;
         if (!NOOP) {
           $response = $ec2->delete_snapshot($snap['snapshotId']);
@@ -87,15 +134,19 @@ foreach ($snapshots as $volId => &$snaps) {
             die("Deletion of '{$snap['snapshotId']}' failed\n");
           }
         } else {
-          echo "[NOOP]\tDelete '{$snap['snapshotId']}' ({$snap['volumeId']})\n";
+          if ($settings['verbose'] > 1) echo "[NOOP]\tDelete '{$snap['snapshotId']}' ({$snap['volumeId']})\n";
         }
       } else {
         $remaining++;
+        $lastSavedSnapshotTs = $t;
       }
     } else {
       die('SNAPSHOT TOO OLD!!');
-      $remaining++;
     }
   }
+  echo "\tDELETED: {$deleted}\n";
+  echo "\tREMAIN:  {$remaining}\n";
+  $totalDeleted += $deleted;
+  $totalRemaining += $remaining;
 }
-echo "Deleted: $deleted snapshots".(NOOP?" (not really - NOOP)":"").", remaining: $remaining snapshots\n";
+echo "Deleted: $totalDeleted snapshots".(NOOP?" (not really - NOOP)":"").", remaining: $totalRemaining snapshots\n";
