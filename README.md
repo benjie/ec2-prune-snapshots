@@ -13,6 +13,8 @@ If you're doing `ec2-create-snapshot` frequently, then you'll need to clear thos
  * Handle multiple snapshots per day (by deleting all but the most recent snapshot per volume per day, excluding the last [3] days)
  * Configurable on the command line (see below)
  * Uses the official AWS PHP SDK
+ * Uses the UTC timezone, just like AWS, so SHOULD be consistent
+   wherever you run it.
 
 ## Installing
 
@@ -46,18 +48,19 @@ Then you can see what the script would do by running
 From the help message:
 
     $ php ec2-prune-snapshots.php -h
-    ec2-prune-snapshots v0.1 by http://www.BenjieGillam.com/
+    ec2-prune-snapshots v0.2 by Benjie Gillam
 
     This script defaults to no action - specify -d to perform operations.
-    Be sure to set your credentials in ~/.aws/sdk/config.inc.php as specified by the AWS SDK. See: https://aws.amazon.com/articles/4261#configurecredentials
+    Be sure to set your credentials in ~/.aws/sdk/config.inc.php as specified by
+      the AWS SDK. See: https://aws.amazon.com/articles/4261#configurecredentials
 
     Usage:
-      -h		Help
-      -v		Verbose (specify multiple times for greater verbosity)
-      -q		Quiet
-      -d		Actually perform operations (delete/do it)
-      -a365:30:7:3	Set global options
-      -v'vol-abcdefgh:365:30:7:3'	Set options for specific volume
+      -h               Help
+      -v               Verbose (specify multiple times for greater verbosity)
+      -q               Quiet
+      -d               Actually perform operations (delete/do it)
+      -a365:30:7:3     Set global options
+      -v'vol-abcdefgh:365:30:7:3'    Set options for specific volume
 
     Options are specified as 4 ages, in days, for each operation
       1st: delete all older snapshots
