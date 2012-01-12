@@ -1,7 +1,6 @@
 <?php
-define('NOOP',true);
-
 $defaultSettings = array(
+  "NOOP"=>true,
   "quiet"=>0,
   "verbose"=>0,
   "clearAllBefore"=>18*30,  // 18 months, roughly
@@ -22,9 +21,11 @@ function optcount($options,$s) {
   }
 }
 
-$options = getopt("vqa:V:");
+$options = getopt("vqa:V:d");
 $defaultSettings['quiet'] = optcount($options,'q');
 $defaultSettings['verbose'] = optcount($options,'v');
+$defaultSettings['NOOP'] = !isset($options['d']);
+define('NOOP',$defaultSettings['NOOP']);
 if (isset($options['a'])) {
   if (is_array($options['a'])) {
     die("ERROR: Don't specify multiple '-a' options.\n");
@@ -119,6 +120,9 @@ function keepSnapShot($ts, $lastSavedTs, $settings) {
     return FALSE;
   }
 }
+if (NOOP) {
+  echo "WARNING: NOTHING WILL BE DELETED. Run this command again with -d (do it!) to actually perform the operations.\n";
+}
 require(dirname(__FILE__).'/sdk/sdk.class.php');
 
 $ec2 = new AmazonEC2();
@@ -193,3 +197,6 @@ foreach ($snapshots as $volId => &$snaps) {
   $totalRemaining += $remaining;
 }
 echo "Deleted: $totalDeleted snapshots".(NOOP?" (not really - NOOP)":"").", remaining: $totalRemaining snapshots\n";
+if (NOOP) {
+  echo "WARNING: NOTHING HAPPENED. Run this command again with -d (do it!) to actually perform the operations.\n";
+}
