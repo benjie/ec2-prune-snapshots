@@ -10,6 +10,8 @@ $defaultSettings = array(
   "oncePerDayBefore"=>3     // 3 days
 );
 
+$volumeSettings = array();
+
 function optcount($options,$s) {
   if (!isset($options[$s])) {
     return 0;
@@ -20,9 +22,46 @@ function optcount($options,$s) {
   }
 }
 
-$options = getopt("vqa:");
+$options = getopt("vqa:V:");
 $defaultSettings['quiet'] = optcount($options,'q');
 $defaultSettings['verbose'] = optcount($options,'v');
+if (isset($options['a'])) {
+  if (is_array($options['a'])) {
+    die("ERROR: Don't specify multiple '-a' options.\n");
+  }
+  $s = explode(":",$options['a']);
+  if (count($s) != 4) {
+    die("ERROR: Invalid '-a' options\n");
+  }
+  $defaultSettings['clearAllBefore'] = intval($s[0]);
+  $defaultSettings['clearNot1stBefore'] = intval($s[1]);
+  $defaultSettings['clearNotSunBefore'] = intval($s[2]);
+  $defaultSettings['oncePerDayBefore'] = intval($s[3]);
+}
+if (isset($options['V'])) {
+  $V = $options['V'];
+  if (!is_array($V)) {
+    $V = array($V);
+  }
+  foreach ($V as $o) {
+    $s = explode(':',$o);
+    $vol = array_shift($s);
+    if (substr($vol,0,4) != "vol-"||count($s) != 4) {
+      die("ERROR: Invalid -V argument: '$o' (should be 'vol-123456:365:30:7:3')\n");
+    }
+    $settings = array();
+    $settings['clearAllBefore'] = intval($s[0]);
+    $settings['clearNot1stBefore'] = intval($s[1]);
+    $settings['clearNotSunBefore'] = intval($s[2]);
+    $settings['oncePerDayBefore'] = intval($s[3]);
+    foreach ($settings as $s=>$v) {
+      if ($v < 1) {
+        die("ERROR: Invalid -V argument, all values must be >= 1\n");
+      }
+    }
+    $volumeSettings[$vol] = $settings;
+  }
+}
 // Credit to Erik Dasque for inspiring the following function
 function keepSnapShot($ts, $lastSavedTs, $settings) {
   $now = time();
@@ -32,6 +71,9 @@ function keepSnapShot($ts, $lastSavedTs, $settings) {
   $oncePerDayAfter =  $now - $settings['clearNotSunBefore'] * $day;
   $saveAfter =        $now - $settings['oncePerDayBefore'] * $day;
 
+  if ($saveAfter > $now - 24*60*60) {
+    die("ERROR: This script requires all snapshots to be saved for at least 24 hours.\n");
+  }
   if ( $saveAfter         < $oncePerDayAfter
     || $oncePerDayAfter   < $clearNotSunAfter
     || $clearNotSunAfter  < $clearNot1stAfter)
@@ -64,14 +106,12 @@ function keepSnapShot($ts, $lastSavedTs, $settings) {
   } else {
     if ($isDailyDupe) {
       if (!$quiet) echo "{$logDate}Daily dupe\tDELETE\n";
+    } else if ($ts < $clearNot1stAfter) {
+      if (!$quiet) echo "{$logDate}Ancient backup\tDELETE\n";
     } else if (!$isSunday && !$is1st) {
       if (!$quiet) echo "{$logDate}Old backup\tDELETE\n";
     } else if ($isSunday && !$is1st) {
       if (!$quiet) echo "{$logDate}Old Sunday\tDELETE\n";
-    } else if ($isSunday && $is1st) {
-      if (!$quiet) echo "{$logDate}Ancient Sunday\tDELETE\n";
-    } else if ($ts < $clearNot1stAfter) {
-      if (!$quiet) echo "{$logDate}Ancient backup\tDELETE\n";
     } else {
       echo "{$logDate}UNKNOWN!!\n";
       die("ERROR: Not sure on reason for deletion?!\n");
@@ -113,6 +153,9 @@ $totalDeleted = 0;
 $totalRemaining = 0;
 foreach ($snapshots as $volId => &$snaps) {
   $settings = $defaultSettings;
+  if (!empty($volumeSettings[$volId])) {
+    $settings = $volumeSettings[$volId] + $settings;
+  }
   echo "Processing '$volId'\n";
   if (empty($snaps)) {
     continue;
