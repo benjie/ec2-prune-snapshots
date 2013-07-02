@@ -24,7 +24,7 @@ modify the source of this script) or pull their version
 straight from github. I prefer the latter aproach so I've linked
 it as a submodule. To fetch it, simply do the following:
 
-    git clone git://github.com/BenjieGillam/ec2-prune-snapshots.git
+    git clone git://github.com/benjie/ec2-prune-snapshots.git
     cd ec2-prune-snapshots
     git submodule update --init
 
