@@ -40,7 +40,7 @@ function keepSnapShot($ts, $lastSavedTs, $settings) {
     || $oncePerDayAfter   < $clearNotSunAfter
     || $clearNotSunAfter  < $clearNot1stAfter)
   {
-    die("Invalid order");
+    die("Invalid options to -a: each number between the colons must be smaller than the previous one.");
   }
 
   $verbose = $settings['verbose'];
