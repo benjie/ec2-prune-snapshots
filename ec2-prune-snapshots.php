@@ -34,13 +34,15 @@ function keepSnapShot($ts, $lastSavedTs, $settings) {
   $saveAfter =        $now - $settings['oncePerDayBefore'] * $day;
 
   if ($saveAfter > $now - 24*60*60) {
-    die("ERROR: This script requires all snapshots to be saved for at least 24 hours.\n");
+    echo("ERROR: This script requires all snapshots to be saved for at least 24 hours.\n");
+    die(1);
   }
   if ( $saveAfter         < $oncePerDayAfter
     || $oncePerDayAfter   < $clearNotSunAfter
     || $clearNotSunAfter  < $clearNot1stAfter)
   {
-    die("Invalid options to -a: each number between the colons must be smaller than the previous one.");
+    echo("Invalid options to -a: each number between the colons must be smaller than the previous one.");
+    die(1);
   }
 
   $verbose = $settings['verbose'];
@@ -111,11 +113,13 @@ $defaultSettings['verbose'] = optcount($options,'v');
 define('NOOP',!isset($options['d']));
 if (isset($options['a'])) {
   if (is_array($options['a'])) {
-    die("ERROR: Don't specify multiple '-a' options.\n");
+    echo("ERROR: Don't specify multiple '-a' options.\n");
+    die(1);
   }
   $s = explode(":",$options['a']);
   if (count($s) != 4) {
-    die("ERROR: Invalid '-a' options\n");
+    echo("ERROR: Invalid '-a' options\n");
+    die(1);
   }
   $defaultSettings['clearAllBefore'] = intval($s[0]);
   $defaultSettings['clearNot1stBefore'] = intval($s[1]);
@@ -131,7 +135,8 @@ if (isset($options['V'])) {
     $s = explode(':',$o);
     $vol = array_shift($s);
     if (substr($vol,0,4) != "vol-"||count($s) != 4) {
-      die("ERROR: Invalid -V argument: '$o' (should be 'vol-123456:365:30:7:3')\n");
+      echo("ERROR: Invalid -V argument: '$o' (should be 'vol-123456:365:30:7:3')\n");
+      die(1);
     }
     $settings = array();
     $settings['clearAllBefore'] = intval($s[0]);
@@ -140,7 +145,8 @@ if (isset($options['V'])) {
     $settings['oncePerDayBefore'] = intval($s[3]);
     foreach ($settings as $s=>$v) {
       if ($v < 1) {
-        die("ERROR: Invalid -V argument, all values must be >= 1\n");
+        echo("ERROR: Invalid -V argument, all values must be >= 1\n");
+        die(1);
       }
     }
     $volumeSettings[$vol] = $settings;
@@ -155,7 +161,8 @@ if (NOOP) {
 $ec2 = new AmazonEC2();
 $response = $ec2->describe_snapshots(array('Owner' => 'self'));
 if (!$response->isOK()) {
-  die('REQUEST FAILED');
+  echo('REQUEST FAILED');
+  die(1);
 }
 
 $snapshots = array();
@@ -164,6 +171,10 @@ foreach ($response->body->snapshotSet->item as $item) {
   $item = (array)$item;
   if ($item['status'] != "completed") {
     echo "{$item['snapshotId']} incomplete\n";
+    continue;
+  }
+  if (strpos($item['description'],'CreateImage') !== false) {
+    echo "{$item['snapshotId']} is part of an AMI image and can't be deleted.\n";
     continue;
   }
   $volId = $item['volumeId']."";
@@ -203,7 +214,8 @@ foreach ($snapshots as $volId => &$snaps) {
         if (!NOOP) {
           $response = $ec2->delete_snapshot($snap['snapshotId']);
           if (!$response->isOK()) {
-            die("Deletion of '{$snap['snapshotId']}' failed\n");
+            echo("Deletion of '{$snap['snapshotId']}' failed\n");
+            die(1);
           }
         } else {
           if ($settings['verbose'] > 1) echo "[NOOP]\tDelete '{$snap['snapshotId']}' ({$snap['volumeId']})\n";
@@ -213,7 +225,8 @@ foreach ($snapshots as $volId => &$snaps) {
         $lastSavedSnapshotTs = $t;
       }
     } else {
-      die('SNAPSHOT TOO OLD!!');
+      echo('SNAPSHOT TOO OLD!!');
+      die(1);
     }
   }
   echo "\tDELETED: {$deleted}\n";
