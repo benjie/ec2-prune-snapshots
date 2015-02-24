@@ -97,7 +97,7 @@ if (isset($options['h'])) {
   echo "\t-q\t\tQuiet\n";
   echo "\t-d\t\tActually perform operations (delete/do it)\n";
   echo "\t-a365:30:7:3\tSet global options\n";
-  echo "\t-v'vol-abcdefgh:365:30:7:3'\tSet options for specific volume\n";
+  echo "\t-V'vol-abcdefgh:365:30:7:3'\tSet options for specific volume\n";
   echo "\n";
   echo "Options are specified as 4 ages, in days, for each operation\n";
   echo "\t1st: delete all older snapshots\n";
