@@ -60,7 +60,7 @@ From the help message:
       -q               Quiet
       -d               Actually perform operations (delete/do it)
       -a365:30:7:3     Set global options
-      -v'vol-abcdefgh:365:30:7:3'    Set options for specific volume
+      -V'vol-abcdefgh:365:30:7:3'    Set options for specific volume
 
     Options are specified as 4 ages, in days, for each operation
       1st: delete all older snapshots
